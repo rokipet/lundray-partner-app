@@ -27,10 +27,14 @@ class StatusBadge extends StatelessWidget {
 
   static _BadgeConfig _getConfig(String status) {
     switch (status) {
+      case 'created':
+        return _BadgeConfig('New', Colors.grey);
+      case 'confirmed':
+        return _BadgeConfig('Confirmed', Colors.orange.shade300);
       case 'pickup_scheduled':
-        return _BadgeConfig('Pickup Scheduled', Colors.orange);
+        return _BadgeConfig('Scheduled', Colors.orange);
       case 'picked_up':
-        return _BadgeConfig('Picked Up', Colors.blue);
+        return _BadgeConfig('En Route', Colors.blue);
       case 'at_partner':
         return _BadgeConfig('At Partner', Colors.amber.shade700);
       case 'weighed':

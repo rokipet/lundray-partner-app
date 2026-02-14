@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:realtime_client/realtime_client.dart';
 import '../config/supabase.dart';
 import '../models/order.dart';
 
@@ -26,11 +28,15 @@ class OrdersState {
 class OrdersNotifier extends StateNotifier<OrdersState> {
   OrdersNotifier(this._partnerId) : super(OrdersState(isLoading: true)) {
     _fetchOrders();
-    _subscribeToOrders();
+    _setupRealtime();
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _fetchOrders();
+    });
   }
 
   final String _partnerId;
-  StreamSubscription? _subscription;
+  RealtimeChannel? _channel;
+  Timer? _pollTimer;
 
   Future<void> _fetchOrders() async {
     try {
@@ -52,22 +58,23 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
     }
   }
 
-  void _subscribeToOrders() {
-    _subscription = supabase
-        .from('orders')
-        .stream(primaryKey: ['id'])
-        .eq('partner_id', _partnerId)
-        .listen((data) {
-          if (mounted) {
-            final orders = data.map((e) => Order.fromJson(e)).toList();
-            orders.sort((a, b) {
-              final aDate = a.createdAt ?? '';
-              final bDate = b.createdAt ?? '';
-              return bDate.compareTo(aDate);
-            });
-            state = OrdersState(orders: orders);
-          }
-        });
+  void _setupRealtime() {
+    _channel = supabase.channel('partner_orders_$_partnerId');
+    _channel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'partner_id',
+            value: _partnerId,
+          ),
+          callback: (payload) {
+            _fetchOrders();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> refresh() async {
@@ -77,7 +84,10 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    _pollTimer?.cancel();
+    if (_channel != null) {
+      supabase.removeChannel(_channel!);
+    }
     super.dispose();
   }
 }

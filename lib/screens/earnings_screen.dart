@@ -47,8 +47,8 @@ class EarningsScreen extends ConsumerWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.9,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 0.85,
                       children: [
                         SummaryCard(
                           title: 'Total',

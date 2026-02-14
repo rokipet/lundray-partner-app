@@ -103,18 +103,21 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   int _stepIndex(String? status) {
     switch (status) {
+      case 'created':
+      case 'confirmed':
       case 'pickup_scheduled':
       case 'picked_up':
-        return 0;
+        return 0; // Incoming
       case 'at_partner':
+        return 1; // Received
       case 'weighed':
-        return 1;
       case 'in_process':
+        return 2; // Processing
       case 'ready':
-        return 2;
+        return 3; // Ready
       case 'out_for_delivery':
       case 'delivered':
-        return 3;
+        return 4; // Delivered
       default:
         return 0;
     }
@@ -328,77 +331,114 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Widget _buildProgressTracker(int currentStep) {
-    final steps = [
-      'Picked up',
-      'Washing & drying',
-      'Folding',
-      'Out for delivery',
-    ];
+    final steps = ['Incoming', 'Received', 'Processing', 'Ready', 'Delivered'];
+    final stepCount = steps.length;
 
-    return Row(
-      children: List.generate(steps.length, (index) {
-        final isCompleted = index <= currentStep;
-        final isActive = index == currentStep;
-        return Expanded(
-          child: Column(
-            children: [
-              Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        final stepWidth = totalWidth / stepCount;
+
+        return Column(
+          children: [
+            SizedBox(
+              height: 28,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  if (index > 0)
-                    Expanded(
-                      child: Container(
-                        height: 2,
-                        color: index <= currentStep
-                            ? const Color(0xFF10B981)
-                            : Colors.grey.shade300,
+                  // Background line
+                  Positioned(
+                    left: stepWidth / 2,
+                    right: stepWidth / 2,
+                    child: Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: isCompleted
-                          ? const Color(0xFF10B981)
-                          : Colors.grey.shade300,
-                      shape: BoxShape.circle,
-                      border: isActive
-                          ? Border.all(
-                              color: const Color(0xFF10B981), width: 3)
-                          : null,
-                    ),
-                    child: isCompleted
-                        ? const Icon(Icons.check,
-                            color: Colors.white, size: 14)
-                        : null,
                   ),
-                  if (index < steps.length - 1)
-                    Expanded(
+                  // Progress line
+                  if (currentStep > 0)
+                    Positioned(
+                      left: stepWidth / 2,
+                      width: stepWidth * currentStep,
                       child: Container(
-                        height: 2,
-                        color: index < currentStep
-                            ? const Color(0xFF10B981)
-                            : Colors.grey.shade300,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
+                  // Circles
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(stepCount, (index) {
+                      final isCompleted = index <= currentStep;
+                      final isActive = index == currentStep;
+                      return Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: isCompleted
+                              ? const Color(0xFF10B981)
+                              : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isCompleted
+                                ? const Color(0xFF10B981)
+                                : Colors.grey.shade300,
+                            width: isActive ? 3 : 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: isCompleted
+                              ? const Icon(Icons.check,
+                                  color: Colors.white, size: 14)
+                              : Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade400,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      );
+                    }),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                steps[index],
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isCompleted
-                      ? const Color(0xFF1F2937)
-                      : Colors.grey.shade500,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(stepCount, (index) {
+                final isCompleted = index <= currentStep;
+                final isActive = index == currentStep;
+                return SizedBox(
+                  width: stepWidth,
+                  child: Text(
+                    steps[index],
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isCompleted
+                          ? const Color(0xFF1F2937)
+                          : Colors.grey.shade500,
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }),
+            ),
+          ],
         );
-      }),
+      },
     );
   }
 

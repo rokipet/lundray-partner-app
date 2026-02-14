@@ -24,12 +24,13 @@ class SummaryCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null)
-              Icon(icon, color: cardColor, size: 24)
+              Icon(icon, color: cardColor, size: 22)
             else
               Container(
                 width: 8,
@@ -39,22 +40,29 @@ class SummaryCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
               ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: cardColor,
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: cardColor,
+                ),
+                maxLines: 1,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               title,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: Colors.grey.shade600,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

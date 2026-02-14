@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../config/supabase.dart';
 import '../models/order.dart';
 import '../models/bag.dart';
+import '../providers/auth_provider.dart';
 import '../providers/orders_provider.dart';
 
 class ProcessWizardScreen extends ConsumerStatefulWidget {
@@ -189,27 +190,21 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
     }
   }
 
-  double _calculateRate(Order order) {
-    return order.serviceType == 'express' ? 2.49 : 1.99;
+  double _getPartnerRate() {
+    final profile = ref.read(authProvider).profile;
+    return profile?.partnerRatePerLb ?? 0.80;
   }
 
-  double _calculateMinimumCharge(Order order) {
-    return 20 * _calculateRate(order);
+  double _getPartnerMinimumEarning() {
+    final profile = ref.read(authProvider).profile;
+    return profile?.partnerMinimumEarning ?? 15.0;
   }
 
-  double _calculateSubtotal(Order order) {
-    final rate = _calculateRate(order);
-    final minimumCharge = _calculateMinimumCharge(order);
-    final weightCharge = _weight * rate;
-    return weightCharge > minimumCharge ? weightCharge : minimumCharge;
-  }
-
-  double _calculateExpressFee(Order order) {
-    return order.serviceType == 'express' ? 10.0 : 0;
-  }
-
-  double _calculateTotal(Order order) {
-    return _calculateSubtotal(order) + _calculateExpressFee(order);
+  double _calculateEarning() {
+    final rate = _getPartnerRate();
+    final minimum = _getPartnerMinimumEarning();
+    final earning = _weight * rate;
+    return earning > minimum ? earning : minimum;
   }
 
   Future<void> _submit(Order order) async {
@@ -659,12 +654,10 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
 
   // Step 3: Weight
   Widget _buildWeightStep(Order order) {
-    final rate = _calculateRate(order);
-    final minimumCharge = _calculateMinimumCharge(order);
-    final weightCharge = _weight * rate;
-    final subtotal = _calculateSubtotal(order);
-    final expressFee = _calculateExpressFee(order);
-    final total = _calculateTotal(order);
+    final rate = _getPartnerRate();
+    final minimum = _getPartnerMinimumEarning();
+    final weightEarning = _weight * rate;
+    final earning = _calculateEarning();
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -713,22 +706,21 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Your Earning',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 8),
                   _priceRow('Weight x Rate',
-                      '${_weight.toStringAsFixed(1)} x \$${rate.toStringAsFixed(2)}',
-                      value: '\$${weightCharge.toStringAsFixed(2)}'),
-                  _priceRow('Minimum Charge', '',
-                      value: '\$${minimumCharge.toStringAsFixed(2)}'),
+                      '${_weight.toStringAsFixed(1)} x \$${rate.toStringAsFixed(2)}/lb',
+                      value: '\$${weightEarning.toStringAsFixed(2)}'),
+                  _priceRow('Minimum Earning', '',
+                      value: '\$${minimum.toStringAsFixed(2)}'),
                   const Divider(),
-                  _priceRow('Subtotal', '',
-                      value: '\$${subtotal.toStringAsFixed(2)}',
-                      bold: true),
-                  if (expressFee > 0)
-                    _priceRow('Express Fee', '',
-                        value: '\$${expressFee.toStringAsFixed(2)}'),
-                  const Divider(),
-                  _priceRow('Total', '',
-                      value: '\$${total.toStringAsFixed(2)}',
+                  _priceRow('Your Earning', '',
+                      value: '\$${earning.toStringAsFixed(2)}',
                       bold: true,
                       color: const Color(0xFF10B981)),
                 ],
@@ -818,7 +810,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
 
   // Step 4: Confirm
   Widget _buildConfirmStep(Order order) {
-    final total = _calculateTotal(order);
+    final earning = _calculateEarning();
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -860,7 +852,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
                     _summaryRow(
                         'Weight', '${_weight.toStringAsFixed(1)} lbs'),
                     _summaryRow(
-                        'Total', '\$${total.toStringAsFixed(2)}'),
+                        'Your Earning', '\$${earning.toStringAsFixed(2)}'),
                     if (order.instructions != null &&
                         order.instructions!.isNotEmpty) ...[
                       const Divider(),

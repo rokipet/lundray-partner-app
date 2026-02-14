@@ -62,12 +62,12 @@ class HomeScreen extends ConsumerWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: 1.4,
+                      childAspectRatio: 1.3,
                       children: [
                         SummaryCard(
                           title: 'Incoming',
                           value: ordersState
-                              .countByStatus(['picked_up']).toString(),
+                              .countByStatus(['created', 'confirmed', 'pickup_scheduled', 'picked_up']).toString(),
                           color: Colors.blue,
                           icon: Icons.local_shipping,
                         ),
@@ -99,7 +99,7 @@ class HomeScreen extends ConsumerWidget {
                     _buildOrderSection(
                       context,
                       'Incoming Orders',
-                      ordersState.byStatus(['picked_up']),
+                      ordersState.byStatus(['created', 'confirmed', 'pickup_scheduled', 'picked_up']),
                     ),
                     _buildOrderSection(
                       context,
