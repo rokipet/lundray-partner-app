@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase.dart';
@@ -87,7 +88,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         profile: profile,
       );
     } catch (e) {
-      state = AuthState(error: 'Failed to load profile: $e');
+      debugPrint('Profile fetch error: $e');
+      state = AuthState(error: 'Failed to load profile. Please try again.');
     }
   }
 

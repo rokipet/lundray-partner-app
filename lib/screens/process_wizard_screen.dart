@@ -117,7 +117,8 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
                 _scanError = null;
               });
             } catch (e) {
-              setState(() => _scanError = 'Error scanning bag: $e');
+              debugPrint('Bag scan error: $e');
+              setState(() => _scanError = 'Error scanning bag. Please try again.');
             }
           },
         ),
@@ -184,7 +185,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload photo: $e')),
+          const SnackBar(content: Text('Failed to upload photo. Please try again.')),
         );
       }
     }
@@ -283,8 +284,9 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
+      debugPrint('Submit error: $e');
       setState(() {
-        _submitError = 'Error: $e';
+        _submitError = 'Something went wrong. Please try again.';
         _isSubmitting = false;
       });
     }

@@ -59,7 +59,8 @@ class _ReadyScreenState extends ConsumerState<ReadyScreen> {
             bagCode, false, body['error'] ?? 'Failed to mark ready');
       }
     } catch (e) {
-      _addScanResult(bagCode, false, 'Error: $e');
+      debugPrint('Ready scan error: $e');
+      _addScanResult(bagCode, false, 'Something went wrong. Please try again.');
     } finally {
       setState(() => _isProcessing = false);
     }

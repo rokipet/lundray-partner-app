@@ -85,7 +85,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         _showError(body['error'] ?? 'Failed to update status');
       }
     } catch (e) {
-      _showError('Error: $e');
+      debugPrint('Status update error: $e');
+      _showError('Something went wrong. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _isUpdating = false);
