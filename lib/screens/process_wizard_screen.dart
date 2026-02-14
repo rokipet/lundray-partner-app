@@ -266,6 +266,13 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
         );
       }
 
+      // Refresh providers so order detail + dashboard update immediately
+      ref.read(singleOrderProvider(widget.orderId).notifier).refresh();
+      final partnerId = ref.read(authProvider).profile?.id;
+      if (partnerId != null) {
+        ref.read(ordersProvider(partnerId).notifier).refresh();
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
