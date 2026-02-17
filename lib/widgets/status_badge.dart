@@ -89,3 +89,64 @@ class ServiceTypeBadge extends StatelessWidget {
     );
   }
 }
+
+class CategoryBadge extends StatelessWidget {
+  final String? category;
+
+  const CategoryBadge({super.key, required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _getCategoryConfig(category);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: config.bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        config.label,
+        style: TextStyle(
+          color: config.textColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  static _CategoryConfig _getCategoryConfig(String? category) {
+    switch (category) {
+      case 'dry_cleaning':
+        return _CategoryConfig(
+          label: 'Dry Clean',
+          bgColor: const Color(0xFFF3E8FF),
+          textColor: const Color(0xFF7C3AED),
+        );
+      case 'bulky_items':
+        return _CategoryConfig(
+          label: 'Bulky',
+          bgColor: const Color(0xFFFFF7ED),
+          textColor: const Color(0xFFC2410C),
+        );
+      default:
+        return _CategoryConfig(
+          label: 'Wash',
+          bgColor: const Color(0xFFDBEAFE),
+          textColor: const Color(0xFF1D4ED8),
+        );
+    }
+  }
+}
+
+class _CategoryConfig {
+  final String label;
+  final Color bgColor;
+  final Color textColor;
+
+  _CategoryConfig({
+    required this.label,
+    required this.bgColor,
+    required this.textColor,
+  });
+}

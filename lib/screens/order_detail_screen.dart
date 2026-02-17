@@ -146,6 +146,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Center(child: CategoryBadge(category: order.serviceCategory)),
+          ),
           if (order.status != null)
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -206,8 +210,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     _detailRow('Customer', order.customerName),
+                    _detailRow('Category', order.categoryLabel),
                     _detailRow(
-                        'Service',
+                        'Speed',
                         order.serviceType == 'express'
                             ? 'Express'
                             : 'Standard'),
@@ -255,6 +260,82 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
               ),
             ),
+            // Items table (non-wash orders)
+            if (!order.isWash && order.items.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Order Items',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...order.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item.name,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                Text(
+                                  'x${item.quantity}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  '\$${item.subtotal.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '\$${order.items.fold<double>(0, (sum, item) => sum + item.subtotal).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Action buttons

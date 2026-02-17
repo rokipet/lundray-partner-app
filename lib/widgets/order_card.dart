@@ -50,6 +50,8 @@ class OrderCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
+                  CategoryBadge(category: order.serviceCategory),
+                  const SizedBox(width: 6),
                   if (order.serviceType != null)
                     ServiceTypeBadge(serviceType: order.serviceType!),
                   const SizedBox(width: 8),

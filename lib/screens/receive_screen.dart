@@ -73,16 +73,22 @@ class ReceiveScreen extends ConsumerWidget {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      '#${order.orderNumber ?? 'N/A'}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                    Expanded(
+                                      child: Text(
+                                        '#${order.orderNumber ?? 'N/A'}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                     ),
-                                    if (order.serviceType != null)
+                                    CategoryBadge(
+                                        category: order.serviceCategory),
+                                    if (order.serviceType != null) ...[
+                                      const SizedBox(width: 6),
                                       ServiceTypeBadge(
                                           serviceType: order.serviceType!),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 8),
@@ -99,6 +105,21 @@ class ReceiveScreen extends ConsumerWidget {
                                     style: TextStyle(
                                       color: Colors.grey.shade500,
                                       fontSize: 13,
+                                    ),
+                                  ),
+                                // Items summary for non-wash orders
+                                if (!order.isWash &&
+                                    order.items.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      '${order.items.length} item${order.items.length != 1 ? 's' : ''}: ${order.items.map((i) => '${i.quantity}x ${i.name}').join(', ')}',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade500,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 const SizedBox(height: 12),
@@ -150,8 +171,14 @@ class ReceiveScreen extends ConsumerWidget {
                             onTap: () => context.push('/order/${order.id}'),
                             leading: const Icon(Icons.check_circle,
                                 color: Color(0xFF7C3AED)),
-                            title:
+                            title: Row(
+                              children: [
                                 Text('#${order.orderNumber ?? 'N/A'}'),
+                                const SizedBox(width: 6),
+                                CategoryBadge(
+                                    category: order.serviceCategory),
+                              ],
+                            ),
                             subtitle: Text(order.customerName),
                             trailing: order.finalWeight != null
                                 ? Text(

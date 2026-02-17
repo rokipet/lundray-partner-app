@@ -1,3 +1,37 @@
+class OrderItem {
+  final String? itemId;
+  final String name;
+  final int quantity;
+  final double unitPrice;
+  final double subtotal;
+
+  OrderItem({
+    this.itemId,
+    required this.name,
+    required this.quantity,
+    required this.unitPrice,
+    required this.subtotal,
+  });
+
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    return OrderItem(
+      itemId: json['itemId'] as String?,
+      name: json['name'] as String? ?? '',
+      quantity: json['quantity'] as int? ?? 1,
+      unitPrice: _toDouble(json['unitPrice']) ?? 0,
+      subtotal: _toDouble(json['subtotal']) ?? 0,
+    );
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+}
+
 class Order {
   final String id;
   final String? orderNumber;
@@ -17,6 +51,9 @@ class Order {
   final String? pickupDate;
   final String? pickupTimeWindow;
   final String? serviceType;
+  final String? serviceCategory;
+  final String? serviceSpeed;
+  final List<OrderItem> items;
   final double? estimatedWeight;
   final double? finalWeight;
   final double? estimatedPrice;
@@ -61,6 +98,9 @@ class Order {
     this.pickupDate,
     this.pickupTimeWindow,
     this.serviceType,
+    this.serviceCategory,
+    this.serviceSpeed,
+    this.items = const [],
     this.estimatedWeight,
     this.finalWeight,
     this.estimatedPrice,
@@ -88,6 +128,13 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
+    List<OrderItem> parsedItems = [];
+    if (json['items'] != null && json['items'] is List) {
+      parsedItems = (json['items'] as List)
+          .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
     return Order(
       id: json['id'] as String,
       orderNumber: json['order_number'] as String?,
@@ -107,6 +154,9 @@ class Order {
       pickupDate: json['pickup_date'] as String?,
       pickupTimeWindow: json['pickup_time_window'] as String?,
       serviceType: json['service_type'] as String?,
+      serviceCategory: json['service_category'] as String?,
+      serviceSpeed: json['service_speed'] as String?,
+      items: parsedItems,
       estimatedWeight: _toDouble(json['estimated_weight']),
       finalWeight: _toDouble(json['final_weight']),
       estimatedPrice: _toDouble(json['estimated_price']),
@@ -140,6 +190,19 @@ class Order {
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value);
     return null;
+  }
+
+  bool get isWash => serviceCategory == null || serviceCategory == 'wash';
+
+  String get categoryLabel {
+    switch (serviceCategory) {
+      case 'dry_cleaning':
+        return 'Dry Clean';
+      case 'bulky_items':
+        return 'Bulky';
+      default:
+        return 'Wash';
+    }
   }
 
   String get customerName {

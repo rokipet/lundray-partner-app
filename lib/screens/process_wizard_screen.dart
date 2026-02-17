@@ -54,25 +54,36 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
     super.dispose();
   }
 
-  void _nextStep() {
-    if (_currentStep < 3) {
-      setState(() => _currentStep++);
-      _pageController.animateToPage(
-        _currentStep,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+  bool _isOrderWash(Order? order) {
+    return order == null || order.isWash;
+  }
+
+  void _goToPage(int page) {
+    setState(() => _currentStep = page);
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _nextStep(Order? order) {
+    final isWash = _isOrderWash(order);
+    if (_currentStep == 1 && !isWash) {
+      // Skip weight step for non-wash, go straight to confirm (page 3)
+      _goToPage(3);
+    } else if (_currentStep < 3) {
+      _goToPage(_currentStep + 1);
     }
   }
 
-  void _prevStep() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-      _pageController.animateToPage(
-        _currentStep,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+  void _prevStep(Order? order) {
+    final isWash = _isOrderWash(order);
+    if (_currentStep == 3 && !isWash) {
+      // Skip weight step for non-wash, go back to photos (page 1)
+      _goToPage(1);
+    } else if (_currentStep > 0) {
+      _goToPage(_currentStep - 1);
     }
   }
 
@@ -225,6 +236,15 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
       }
 
       // Update order status
+      final payload = <String, dynamic>{
+        'status': 'weighed',
+        'photo_url': _scalePhotoUrl,
+      };
+      // Weight is required for wash, optional for non-wash
+      if (_weight > 0) {
+        payload['final_weight'] = _weight;
+      }
+
       final response = await http.patch(
         Uri.parse(
             '$siteUrl/api/partner/orders/${widget.orderId}/status'),
@@ -232,11 +252,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'status': 'weighed',
-          'final_weight': _weight,
-          'photo_url': _scalePhotoUrl,
-        }),
+        body: jsonEncode(payload),
       );
 
       if (response.statusCode != 200) {
@@ -315,69 +331,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
       body: Column(
         children: [
           // Step indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: List.generate(4, (index) {
-                final isActive = index == _currentStep;
-                final isDone = index < _currentStep;
-                return Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: isDone
-                              ? const Color(0xFF10B981)
-                              : isActive
-                                  ? const Color(0xFF7C3AED)
-                                  : Colors.grey.shade300,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: isDone
-                              ? const Icon(Icons.check,
-                                  color: Colors.white, size: 16)
-                              : Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    color: isActive
-                                        ? Colors.white
-                                        : Colors.grey.shade600,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      if (index < 3)
-                        Expanded(
-                          child: Container(
-                            height: 2,
-                            color: isDone
-                                ? const Color(0xFF10B981)
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _stepLabel('Scan', 0),
-                _stepLabel('Photos', 1),
-                _stepLabel('Weight', 2),
-                _stepLabel('Confirm', 3),
-              ],
-            ),
-          ),
+          _buildStepIndicator(order),
           const SizedBox(height: 8),
           // Page content
           Expanded(
@@ -386,7 +340,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildScanStep(order),
-                _buildPhotosStep(),
+                _buildPhotosStep(order),
                 _buildWeightStep(order),
                 _buildConfirmStep(order),
               ],
@@ -397,15 +351,91 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
     );
   }
 
-  Widget _stepLabel(String label, int index) {
-    final isActive = index == _currentStep;
-    return Text(
-      label,
-      style: TextStyle(
-        fontSize: 11,
-        color: isActive ? const Color(0xFF7C3AED) : Colors.grey.shade500,
-        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-      ),
+  Widget _buildStepIndicator(Order order) {
+    final isWash = _isOrderWash(order);
+    // Page indices that are active for this category
+    final pageIndices = isWash ? [0, 1, 2, 3] : [0, 1, 3];
+    final labels = isWash
+        ? ['Scan', 'Photos', 'Weight', 'Confirm']
+        : ['Scan', 'Photos', 'Confirm'];
+    final stepCount = pageIndices.length;
+    // Map current page to visual step index
+    final visualStep = pageIndices.indexOf(_currentStep);
+    final activeVisualStep = visualStep >= 0 ? visualStep : 0;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: List.generate(stepCount, (index) {
+              final isActive = index == activeVisualStep;
+              final isDone = index < activeVisualStep;
+              return Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isDone
+                            ? const Color(0xFF10B981)
+                            : isActive
+                                ? const Color(0xFF7C3AED)
+                                : Colors.grey.shade300,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: isDone
+                            ? const Icon(Icons.check,
+                                color: Colors.white, size: 16)
+                            : Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  color: isActive
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                      ),
+                    ),
+                    if (index < stepCount - 1)
+                      Expanded(
+                        child: Container(
+                          height: 2,
+                          color: isDone
+                              ? const Color(0xFF10B981)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(stepCount, (index) {
+              final isActive = index == activeVisualStep;
+              return Text(
+                labels[index],
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isActive
+                      ? const Color(0xFF7C3AED)
+                      : Colors.grey.shade500,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
     );
   }
 
@@ -471,7 +501,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _nextStep,
+                  onPressed: () => _nextStep(order),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -484,7 +514,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _scannedBags.isNotEmpty ? _nextStep : null,
+                  onPressed: _scannedBags.isNotEmpty ? () => _nextStep(order) : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
@@ -505,7 +535,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
   }
 
   // Step 2: Photos
-  Widget _buildPhotosStep() {
+  Widget _buildPhotosStep(Order order) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -543,7 +573,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _prevStep,
+                  onPressed: () => _prevStep(order),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -556,7 +586,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _nextStep,
+                  onPressed: () => _nextStep(order),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
@@ -741,7 +771,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _prevStep,
+                  onPressed: () => _prevStep(order),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -754,7 +784,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _weight > 0 ? _nextStep : null,
+                  onPressed: _weight > 0 ? () => _nextStep(order) : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
@@ -819,7 +849,8 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
 
   // Step 4: Confirm
   Widget _buildConfirmStep(Order order) {
-    final earning = _calculateEarning();
+    final isWash = _isOrderWash(order);
+    final earning = isWash ? _calculateEarning() : 0.0;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -851,17 +882,50 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
                     _summaryRow(
                         'Order', '#${order.orderNumber ?? 'N/A'}'),
                     _summaryRow('Customer', order.customerName),
+                    _summaryRow('Category', order.categoryLabel),
                     _summaryRow(
-                        'Service',
+                        'Speed',
                         order.serviceType == 'express'
                             ? 'Express'
                             : 'Standard'),
                     _summaryRow(
                         'Bags Scanned', '${_scannedBags.length}'),
-                    _summaryRow(
-                        'Weight', '${_weight.toStringAsFixed(1)} lbs'),
-                    _summaryRow(
-                        'Your Earning', '\$${earning.toStringAsFixed(2)}'),
+                    if (isWash) ...[
+                      _summaryRow(
+                          'Weight', '${_weight.toStringAsFixed(1)} lbs'),
+                      _summaryRow(
+                          'Your Earning', '\$${earning.toStringAsFixed(2)}'),
+                    ],
+                    // Items list for non-wash orders
+                    if (!isWash && order.items.isNotEmpty) ...[
+                      const Divider(),
+                      const Text(
+                        'Items',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...order.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.check,
+                                    color: Color(0xFF10B981), size: 16),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                    child: Text('${item.name} x${item.quantity}',
+                                        style: const TextStyle(fontSize: 14))),
+                                Text(
+                                    '\$${item.subtotal.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          )),
+                    ],
                     if (order.instructions != null &&
                         order.instructions!.isNotEmpty) ...[
                       const Divider(),
@@ -954,7 +1018,7 @@ class _ProcessWizardScreenState extends ConsumerState<ProcessWizardScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isSubmitting ? null : _prevStep,
+                  onPressed: _isSubmitting ? null : () => _prevStep(order),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
